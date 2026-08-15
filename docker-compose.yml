@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres:16
+    container_name: telco_ventas_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: telco_user
+      POSTGRES_PASSWORD: telco_pass
+      POSTGRES_DB: telco_ventas
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # Postgres ejecuta en orden alfabetico todo lo que encuentre aqui
+      # SOLO la primera vez que se crea el volumen (contenedor "limpio")
+      - ./backend/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
+      - ./backend/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/2_data.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telco_user -d telco_ventas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: telco_ventas_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Sobrescriben application.yml en tiempo de ejecucion (Spring relaxed binding).
+      # OJO: aqui la BD se llama "db:5432" (el nombre del servicio Docker + su puerto INTERNO),
+      # no "localhost:5433" - ese 5433 solo existe para acceder desde tu maquina host, dentro
+      # de la red interna de Docker los contenedores se ven entre si por nombre de servicio.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/telco_ventas
+      SPRING_DATASOURCE_USERNAME: telco_user
+      SPRING_DATASOURCE_PASSWORD: telco_pass
+      APP_JWT_SECRET: cambia-este-secreto-por-uno-largo-y-aleatorio-de-al-menos-256-bits
+      APP_JWT_EXPIRATION_MS: 86400000
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+    volumes:
+      # Los logs quedan en tu disco real (backend/logs/), no solo dentro del contenedor -
+      # asi sobreviven a un `docker compose down` o `--build` y los puedes abrir directo
+      # sin pasar por `docker compose logs`.
+      - ./backend/logs:/app/logs
+    ports:
+      - "8080:8080"
+
+  frontend:
+    image: nginx:alpine
+    container_name: telco_ventas_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    volumes:
+      # Monta los archivos tal cual (:ro = solo lectura) - no hay build, nginx solo los sirve.
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "5173:80"
+
+volumes:
+  db_data:

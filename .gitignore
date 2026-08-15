@@ -1,0 +1,22 @@
+# --- Backend (Java / Maven) ---
+backend/target/
+backend/logs/
+*.class
+*.jar
+!*/wrapper/maven-wrapper.jar
+
+# --- Frontend ---
+frontend/node_modules/
+
+# --- IDEs ---
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# --- Docker ---
+# (nada que ignorar por ahora - el Dockerfile y docker-compose.yml SI se versionan)
+
+# --- Variables de entorno locales (si en algun momento usas un .env real) ---
+.env
+.env.local

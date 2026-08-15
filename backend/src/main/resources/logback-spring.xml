@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Consola: logs generales de la app (arranque, errores, SQL, etc.) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Archivo: logs generales de arranque/errores/framework, rota diario -->
+    <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/app/app.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/app/app-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>14</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Auditoria: acciones sobre ventas (crear, aprobar, rechazar) - carpeta propia -->
+    <appender name="AUDIT_VENTAS_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/audit/ventas.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/audit/ventas-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>90</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Auditoria: intentos de login (exitosos y fallidos) - carpeta propia -->
+    <appender name="AUDIT_AUTH_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/audit/auth.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/audit/auth-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>90</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Auditoria: gestion de usuarios (alta de usuarios por un ADMIN) - carpeta propia -->
+    <appender name="AUDIT_USUARIOS_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/audit/usuarios.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/audit/usuarios-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>90</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!--
+        Dos loggers de auditoria, uno por dominio. Se usan asi en el codigo:
+
+        En VentaService:
+            private static final Logger AUDIT_VENTAS = LoggerFactory.getLogger("AUDIT.VENTAS");
+            AUDIT_VENTAS.info("usuario={} rol={} accion=CREAR_VENTA ventaId={} codigoLlamada={}",
+                               usuario.getUsername(), usuario.getRol(), venta.getId(), venta.getCodigoLlamada());
+
+        En AuthService:
+            private static final Logger AUDIT_AUTH = LoggerFactory.getLogger("AUDIT.AUTH");
+            AUDIT_AUTH.info("usuario={} accion=LOGIN resultado=OK", username);
+
+        additivity=false evita que tambien escriban en CONSOLE/APP_FILE (quedan solo en su propio
+        archivo, mas facil de auditar sin ruido de otros logs).
+    -->
+    <logger name="AUDIT.VENTAS" level="INFO" additivity="false">
+        <appender-ref ref="AUDIT_VENTAS_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="AUDIT.AUTH" level="INFO" additivity="false">
+        <appender-ref ref="AUDIT_AUTH_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="AUDIT.USUARIOS" level="INFO" additivity="false">
+        <appender-ref ref="AUDIT_USUARIOS_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <!-- Baja el ruido de Hibernate SQL en consola; sube a DEBUG solo si necesitas depurar queries -->
+    <logger name="org.hibernate.SQL" level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="APP_FILE"/>
+    </root>
+
+</configuration>

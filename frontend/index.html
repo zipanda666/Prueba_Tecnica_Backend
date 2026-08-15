@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telco Fija Hogar · Ventas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===================== PANTALLA DE LOGIN ===================== -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <div>
+        <h1>Telco Fija Hogar</h1>
+        <p class="brand-sub">Panel de ventas</p>
+      </div>
+    </div>
+
+    <form id="login-form">
+      <label for="login-username">Usuario</label>
+      <input type="text" id="login-username" placeholder="agente1" autocomplete="username" required>
+
+      <label for="login-password">Contraseña</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required>
+
+      <button type="submit" class="btn btn-primary btn-full">Ingresar</button>
+      <p id="login-error" class="error-text hidden"></p>
+    </form>
+
+    <div class="login-hint">
+      <strong>Usuarios de prueba</strong>
+      <ul>
+        <li><code>agente1</code> / <code>Agente*123</code> — Agente</li>
+        <li><code>back1</code> / <code>Back*123</code> — Backoffice</li>
+        <li><code>supervisor1</code> / <code>Sup*123</code> — Supervisor</li>
+        <li><code>admin</code> / <code>Admin*123</code> — Supervisor</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== APP (post-login) ===================== -->
+<div id="app-screen" class="app-screen hidden">
+  <header class="topbar">
+    <div class="brand brand-compact">
+      <span class="brand-mark"></span>
+      <span class="brand-name">Telco Fija Hogar</span>
+    </div>
+    <nav id="tabs" class="tabs"></nav>
+    <div class="user-chip">
+      <span id="user-label"></span>
+      <button id="logout-btn" class="btn btn-ghost">Salir</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <div id="banner" class="banner hidden"></div>
+
+    <!-- ---------- Vista AGENTE ---------- -->
+    <section id="view-agente" class="view hidden">
+      <div class="subtabs">
+        <button class="subtab-btn active" data-subview="ag-crear">Registrar venta</button>
+        <button class="subtab-btn" data-subview="ag-lista">Mis ventas</button>
+      </div>
+
+      <div id="subview-ag-crear" class="subview">
+        <div class="card card-narrow">
+          <h2>Registrar venta</h2>
+          <form id="venta-form" class="form-grid">
+            <div class="field">
+              <label>DNI cliente</label>
+              <input type="text" id="f-dni" pattern="\d{8}|\d{11}" maxlength="11" required>
+            </div>
+            <div class="field">
+              <label>Nombre cliente</label>
+              <input type="text" id="f-nombre" required>
+            </div>
+            <div class="field">
+              <label>Teléfono cliente</label>
+              <input type="text" id="f-telefono" pattern="\d{9}" maxlength="9" required>
+            </div>
+            <div class="field field-wide">
+              <label>Dirección cliente</label>
+              <input type="text" id="f-direccion" required>
+            </div>
+            <div class="field">
+              <label>Plan actual</label>
+              <input type="text" id="f-plan-actual" placeholder="(opcional)">
+            </div>
+            <div class="field">
+              <label>Plan nuevo</label>
+              <input type="text" id="f-plan-nuevo" required>
+            </div>
+            <div class="field">
+              <label>Código de llamada</label>
+              <input type="text" id="f-codigo" required>
+            </div>
+            <div class="field">
+              <label>Monto (S/)</label>
+              <input type="number" step="0.01" min="0" id="f-monto" required>
+            </div>
+            <div class="field field-wide">
+              <button type="submit" class="btn btn-primary btn-full">Registrar venta</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="subview-ag-lista" class="subview hidden">
+        <div class="card">
+          <div class="card-head">
+            <h2>Mis ventas</h2>
+          </div>
+          <div class="filters">
+            <select id="ag-filtro-estado">
+              <option value="">Todos los estados</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="APROBADA">Aprobada</option>
+              <option value="RECHAZADA">Rechazada</option>
+            </select>
+            <input type="date" id="ag-filtro-desde" title="Desde">
+            <input type="date" id="ag-filtro-hasta" title="Hasta">
+            <button id="ag-filtrar-btn" class="btn btn-secondary">Filtrar</button>
+          </div>
+          <div id="ag-tabla-wrap" class="table-wrap"></div>
+          <div id="ag-paginacion" class="pagination"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Vista BACKOFFICE ---------- -->
+    <section id="view-backoffice" class="view hidden">
+      <div class="card">
+        <div class="card-head">
+          <h2>Ventas pendientes</h2>
+          <button id="bo-refrescar-btn" class="btn btn-secondary">Refrescar</button>
+        </div>
+        <div id="bo-tabla-wrap" class="table-wrap"></div>
+        <div id="bo-paginacion" class="pagination"></div>
+      </div>
+    </section>
+
+    <!-- ---------- Vista SUPERVISOR ---------- -->
+    <section id="view-supervisor" class="view hidden">
+      <div class="card">
+        <h2>Resumen</h2>
+        <div class="filters">
+          <input type="month" id="sup-mes" title="Mes">
+          <button id="sup-resumen-btn" class="btn btn-secondary">Consultar</button>
+        </div>
+        <div id="sup-resumen-cards" class="stat-cards"></div>
+        <div id="sup-serie-wrap" class="table-wrap"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Ventas del equipo</h2>
+        </div>
+        <div class="filters">
+          <select id="sup-filtro-estado">
+            <option value="">Todos los estados</option>
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="APROBADA">Aprobada</option>
+            <option value="RECHAZADA">Rechazada</option>
+          </select>
+          <select id="sup-filtro-agente">
+            <option value="">Todos los agentes</option>
+          </select>
+          <input type="date" id="sup-filtro-desde" title="Desde">
+          <input type="date" id="sup-filtro-hasta" title="Hasta">
+          <button id="sup-filtrar-btn" class="btn btn-secondary">Filtrar</button>
+        </div>
+        <div id="sup-tabla-wrap" class="table-wrap"></div>
+        <div id="sup-paginacion" class="pagination"></div>
+      </div>
+    </section>
+    <!-- ---------- Vista ADMIN ---------- -->
+    <section id="view-admin" class="view hidden">
+      <div class="grid-2">
+        <div class="card card-narrow">
+          <h2>Crear usuario</h2>
+          <form id="usuario-form" class="form-grid">
+            <div class="field field-wide">
+              <label>Username</label>
+              <input type="text" id="u-username" required>
+            </div>
+            <div class="field field-wide">
+              <label>Password</label>
+              <input type="password" id="u-password" minlength="6" required>
+            </div>
+            <div class="field">
+              <label>Rol</label>
+              <select id="u-rol" required>
+                <option value="AGENTE">Agente</option>
+                <option value="BACKOFFICE">Backoffice</option>
+                <option value="SUPERVISOR">Supervisor</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <div class="field" id="u-supervisor-field">
+              <label>Supervisor</label>
+              <select id="u-supervisor">
+                <option value="">Sin asignar</option>
+              </select>
+            </div>
+            <div class="field field-wide">
+              <button type="submit" class="btn btn-primary btn-full">Crear usuario</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Usuarios del sistema</h2>
+            <button id="adm-refrescar-btn" class="btn btn-secondary">Refrescar</button>
+          </div>
+          <div id="adm-tabla-wrap" class="table-wrap"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Modal de edicion de usuario -->
+<div id="modal-editar-usuario" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Editar usuario</h3>
+    <div class="field field-wide" style="margin-bottom:10px;">
+      <label>Username</label>
+      <input type="text" id="edit-username">
+    </div>
+    <div class="field field-wide" style="margin-bottom:10px;">
+      <label>Rol</label>
+      <select id="edit-rol">
+        <option value="AGENTE">Agente</option>
+        <option value="BACKOFFICE">Backoffice</option>
+        <option value="SUPERVISOR">Supervisor</option>
+        <option value="ADMIN">Admin</option>
+      </select>
+    </div>
+    <div class="field field-wide" id="edit-supervisor-field">
+      <label>Supervisor</label>
+      <select id="edit-supervisor">
+        <option value="">Sin asignar</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button id="modal-editar-cancelar" class="btn btn-ghost">Cancelar</button>
+      <button id="modal-editar-confirmar" class="btn btn-primary">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de cambio de contraseña -->
+<div id="modal-password" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Nueva contraseña</h3>
+    <p style="font-size:12.5px;color:var(--text-500);margin-top:-4px;">Para el usuario <strong id="password-username-label"></strong></p>
+    <textarea id="modal-password-valor" rows="1" placeholder="Mínimo 6 caracteres" style="font-family:var(--font-mono);"></textarea>
+    <div class="modal-actions">
+      <button id="modal-password-cancelar" class="btn btn-ghost">Cancelar</button>
+      <button id="modal-password-confirmar" class="btn btn-primary">Cambiar contraseña</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal simple de motivo de rechazo -->
+<div id="modal-rechazo" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Motivo de rechazo</h3>
+    <textarea id="modal-motivo" rows="3" placeholder="Explica por qué se rechaza esta venta..."></textarea>
+    <div class="modal-actions">
+      <button id="modal-cancelar" class="btn btn-ghost">Cancelar</button>
+      <button id="modal-confirmar" class="btn btn-danger">Rechazar venta</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

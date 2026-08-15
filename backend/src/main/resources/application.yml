@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ventas
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/telco_ventas
+    username: telco_user
+    password: telco_pass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # 'validate' en vez de 'update': el esquema ya lo crea schema.sql via Docker.
+      # Si las entidades no coinciden exactamente con la BD, falla al arrancar
+      # (mejor eso a que Hibernate improvise cambios de esquema por su cuenta).
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+  # schema.sql/data.sql ya se aplican desde docker-entrypoint-initdb.d, no desde Spring
+  sql:
+    init:
+      mode: never
+
+app:
+  jwt:
+    # Solo para desarrollo local. En un entorno real esto va en una variable de entorno,
+    # nunca en el repo (ver docs/decisiones-tecnicas.md).
+    secret: "cambia-este-secreto-por-uno-largo-y-aleatorio-de-al-menos-256-bits"
+    expiration-ms: 86400000  # 24h
+
+cors:
+  allowed-origins: http://localhost:5173
