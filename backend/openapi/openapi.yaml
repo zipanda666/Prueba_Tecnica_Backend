@@ -1,0 +1,438 @@
+openapi: 3.0.3
+info:
+  title: Telco Fija Hogar - API de Ventas
+  description: Flujo de ventas Telco Fija Hogar (registro, aprobacion/rechazo, reportes)
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+
+tags:
+  - name: Auth
+  - name: Ventas
+  - name: Reportes
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Autenticacion, devuelve JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Credenciales invalidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ventas:
+    post:
+      tags: [Ventas]
+      summary: Crear una venta (rol AGENTE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VentaCreateRequest'
+      responses:
+        '201':
+          description: Venta creada en estado PENDIENTE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaResponse'
+        '400':
+          description: Error de validacion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: codigo_llamada duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ventas/mis-ventas:
+    get:
+      tags: [Ventas]
+      summary: Lista las ventas del agente autenticado (rol AGENTE)
+      parameters:
+        - $ref: '#/components/parameters/EstadoParam'
+        - $ref: '#/components/parameters/DesdeParam'
+        - $ref: '#/components/parameters/HastaParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Pagina de ventas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaPage'
+
+  /ventas/pendientes:
+    get:
+      tags: [Ventas]
+      summary: Lista ventas PENDIENTES (rol BACKOFFICE)
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Pagina de ventas pendientes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaPage'
+
+  /ventas/{id}/aprobar:
+    post:
+      tags: [Ventas]
+      summary: Aprueba una venta PENDIENTE (rol BACKOFFICE)
+      parameters:
+        - $ref: '#/components/parameters/VentaIdPath'
+      responses:
+        '200':
+          description: Venta aprobada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaResponse'
+        '404':
+          description: Venta no encontrada
+        '409':
+          description: La venta no esta en estado PENDIENTE
+
+  /ventas/{id}/rechazar:
+    post:
+      tags: [Ventas]
+      summary: Rechaza una venta PENDIENTE (rol BACKOFFICE)
+      parameters:
+        - $ref: '#/components/parameters/VentaIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RechazarVentaRequest'
+      responses:
+        '200':
+          description: Venta rechazada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaResponse'
+        '400':
+          description: Falta motivo_rechazo
+        '404':
+          description: Venta no encontrada
+        '409':
+          description: La venta no esta en estado PENDIENTE
+
+  /ventas/equipo:
+    get:
+      tags: [Ventas]
+      summary: Ventas del equipo del supervisor autenticado (rol SUPERVISOR)
+      parameters:
+        - $ref: '#/components/parameters/EstadoParam'
+        - name: agenteId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/DesdeParam'
+        - $ref: '#/components/parameters/HastaParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Pagina de ventas del equipo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaPage'
+
+  /reportes/resumen:
+    get:
+      tags: [Reportes]
+      summary: Resumen de ventas del equipo (rol SUPERVISOR)
+      description: >
+        Filtra por rango explicito (desde/hasta) o por periodo (mes=YYYY-MM).
+        Si no se envia ningun parametro, resume el mes actual.
+      parameters:
+        - $ref: '#/components/parameters/DesdeParam'
+        - $ref: '#/components/parameters/HastaParam'
+        - name: mes
+          in: query
+          description: "Formato YYYY-MM, alternativa a desde/hasta"
+          schema:
+            type: string
+            example: "2026-08"
+      responses:
+        '200':
+          description: Resumen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumenResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    VentaIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    EstadoParam:
+      name: estado
+      in: query
+      schema:
+        type: string
+        enum: [PENDIENTE, APROBADA, RECHAZADA]
+    DesdeParam:
+      name: desde
+      in: query
+      description: Fecha (YYYY-MM-DD), inclusive
+      schema:
+        type: string
+        format: date
+    HastaParam:
+      name: hasta
+      in: query
+      description: Fecha (YYYY-MM-DD), inclusive
+      schema:
+        type: string
+        format: date
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 0
+    SizeParam:
+      name: size
+      in: query
+      schema:
+        type: integer
+        default: 20
+    SortParam:
+      name: sort
+      in: query
+      description: "campo,direccion - ej: fechaRegistro,desc"
+      schema:
+        type: string
+        default: fechaRegistro
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          example: agente1
+        password:
+          type: string
+          example: Agente*123
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        username:
+          type: string
+        rol:
+          type: string
+          enum: [ADMIN, AGENTE, BACKOFFICE, SUPERVISOR]
+        expiresInMs:
+          type: integer
+          format: int64
+
+    VentaCreateRequest:
+      type: object
+      required: [dniCliente, nombreCliente, telefonoCliente, direccionCliente, planNuevo, codigoLlamada, monto]
+      properties:
+        dniCliente:
+          type: string
+          pattern: '^\d{8}$|^\d{11}$'
+          example: "45678912"
+        nombreCliente:
+          type: string
+          example: "Maria Fernandez Rojas"
+        telefonoCliente:
+          type: string
+          pattern: '^\d{9}$'
+          example: "987654321"
+        direccionCliente:
+          type: string
+          example: "Av. Los Olivos 123, Lima"
+        planActual:
+          type: string
+          nullable: true
+          example: "Internet 100MB"
+        planNuevo:
+          type: string
+          example: "Internet 200MB + TV"
+        codigoLlamada:
+          type: string
+          example: "CALL-0009"
+        producto:
+          type: string
+          default: FIJA_HOGAR
+        monto:
+          type: number
+          format: double
+          example: 129.90
+
+    RechazarVentaRequest:
+      type: object
+      required: [motivoRechazo]
+      properties:
+        motivoRechazo:
+          type: string
+          example: "Cliente fuera de zona de cobertura"
+
+    VentaResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        agenteId:
+          type: integer
+          format: int64
+        agenteUsername:
+          type: string
+        dniCliente:
+          type: string
+        nombreCliente:
+          type: string
+        telefonoCliente:
+          type: string
+        direccionCliente:
+          type: string
+        planActual:
+          type: string
+          nullable: true
+        planNuevo:
+          type: string
+        codigoLlamada:
+          type: string
+        producto:
+          type: string
+        monto:
+          type: number
+        estado:
+          type: string
+          enum: [PENDIENTE, APROBADA, RECHAZADA]
+        motivoRechazo:
+          type: string
+          nullable: true
+        validadoPorId:
+          type: integer
+          format: int64
+          nullable: true
+        validadoPorUsername:
+          type: string
+          nullable: true
+        fechaRegistro:
+          type: string
+          format: date-time
+        fechaValidacion:
+          type: string
+          format: date-time
+          nullable: true
+
+    VentaPage:
+      type: object
+      description: Pagina estandar de Spring Data (org.springframework.data.domain.Page)
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/VentaResponse'
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        number:
+          type: integer
+          description: Pagina actual (0-indexed)
+        size:
+          type: integer
+
+    ResumenResponse:
+      type: object
+      properties:
+        conteosPorEstado:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            PENDIENTE: 3
+            APROBADA: 5
+            RECHAZADA: 2
+        montoTotalAprobadas:
+          type: number
+          example: 850.40
+        ventasPorDia:
+          type: array
+          items:
+            type: object
+            properties:
+              fecha:
+                type: string
+                format: date
+              cantidad:
+                type: integer
+              monto:
+                type: number
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        path:
+          type: string
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          nullable: true
+          items:
+            type: string
