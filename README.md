@@ -45,3 +45,33 @@ cd frontend && python -m http.server 5173
 | Frontend | 5173 |
 | Backend (`/api/v1`, Swagger en `/swagger-ui.html`) | 8080 |
 | PostgreSQL | 5433 |
+```
+
+Levanta BD + backend + frontend con un solo comando. Abrir: **http://localhost:5173**
+
+Si editas `schema.sql`/`data.sql`, resetea con `docker compose down -v` antes de volver a levantar.
+
+**Alternativa (desarrollo iterativo):**
+```bash
+docker compose up -d db
+cd backend && mvn spring-boot:run
+cd frontend && python -m http.server 5173
+```
+
+### Usuarios seed
+
+| Username | Password | Rol |
+|---|---|---|
+| admin | Admin*123 | ADMIN |
+| supervisor1 | Sup*123 | SUPERVISOR |
+| agente1 | Agente*123 | AGENTE (bajo supervisor1) |
+| agente2 | Agente*123 | AGENTE (bajo supervisor1) |
+| back1 | Back*123 | BACKOFFICE |
+
+### Puertos
+
+| Servicio | Puerto |
+|---|---|
+| Frontend | 5173 |
+| Backend (`/api/v1`, Swagger en `/swagger-ui.html`) | 8080 |
+| PostgreSQL | 5433 |
